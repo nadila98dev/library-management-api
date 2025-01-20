@@ -1,71 +1,24 @@
 package main
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
-	"os"
+	"library-management-api/router"
 
-	"github.com/google/uuid"
+	"github.com/gofiber/fiber/v2"
 	"github.com/joho/godotenv"
-	"github.com/redis/go-redis/v9"
 )
 
-func main(){
-	godotenv.Load()
-	fmt.Println(("Test Redis Coneect"))
-
-
-	client := redis.NewClient(&redis.Options{
-		Addr:     os.Getenv("DB_ADDRESS"),
-		Password: "", 
-		DB:       0,
-	})
-
-	ping, err := client.Ping(context.Background()).Result();
-	if err != nil {
-		fmt.Println(err.Error())
-		return
+func main() {
+		
+	if err := godotenv.Load(); err != nil {
+		fmt.Println("Error loading .env file")
 	}
+	app := fiber.New();
 
-	fmt.Println((ping))
+	router.SetupRouter(app);
 
-	type Person struct {
-	ID string
-	Name  string             `json:"name"`
-	Age  int                `json:"age"`
-	Occupation string		`json:"occupation"`
+	if err := app.Listen(":3100§); err != nil {
+		panic(err)
+	}
 }
 
-
-	keyId := uuid.NewString()
-
-	jsonString, err := json.Marshal(Person{
-		ID: keyId,
-		Name:  "Mark",
-		Age:   25,
-		Occupation: "Musician",
-	})
-
-	if err != nil {
-		fmt.Println("Failed to marshall", err.Error())
-		return
-	}
-
-	keyIds := fmt.Sprintf("person", keyId)
-	err = client.Set((context.Background()), keyIds, jsonString, 0).Err()
-	if err != nil {
-		fmt.Println("Failed to set a value ")
-		return
-	}
-
-	val, err := client.Get((context.Background()), keyIds).Result()
-	if err != nil {
-		fmt.Println("Failed to Get a value")
-		return
-	}
-
-	fmt.Println(("test redis retrieved"), val)
-
-
-}
