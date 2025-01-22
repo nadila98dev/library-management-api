@@ -17,6 +17,8 @@ func DBSession() {
 		return
 	}
 
+
+
 	dbAddress := os.Getenv("DB_ADDRESS")
 	if dbAddress == "" {
 		fmt.Println("DB_ADDRESS environment variable is not set")
@@ -35,6 +37,7 @@ func DBSession() {
 		return
 	}
 	fmt.Println("Connected to Redis")
+	
 }
 
 // GetClient returns the Redis client for use in other parts of the application

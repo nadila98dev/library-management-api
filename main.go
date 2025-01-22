@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"library-management-api/db"
 	"library-management-api/router"
 
 	"github.com/gofiber/fiber/v2"
@@ -15,9 +16,11 @@ func main() {
 	}
 	app := fiber.New();
 
+	db.DBSession();
+
 	router.SetupRouter(app);
 
-	if err := app.Listen(":3100§); err != nil {
+	if err := app.Listen(":4000"); err != nil {
 		panic(err)
 	}
 }
