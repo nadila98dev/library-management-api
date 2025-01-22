@@ -9,43 +9,35 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+var client *redis.Client
+
 func DBSession() {
-	
 	if err := godotenv.Load(); err != nil {
 		fmt.Println("Error loading .env file")
+		return
 	}
 
+	dbAddress := os.Getenv("DB_ADDRESS")
+	if dbAddress == "" {
+		fmt.Println("DB_ADDRESS environment variable is not set")
+		return
+	}
 
-	client := redis.NewClient(&redis.Options{
-		Addr:     os.Getenv("DB_ADDRESS"),
+	client = redis.NewClient(&redis.Options{
+		Addr:     dbAddress,
 		Password: "", 
-		DB:       0,
+		DB:       0,  
 	})
 
 	ctx := context.Background()
 	if err := client.Ping(ctx).Err(); err != nil {
-		fmt.Println("Could not connect to Redis")
+		fmt.Println("Could not connect to Redis:", err)
 		return
 	}
 	fmt.Println("Connected to Redis")
+}
 
-
-	err := client.Set(crx, "key", "value", 0).Err()
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	val, err := client.Get(ctx, "key").Result()
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-
-	fmt.Println("key", val)
-
-	defer client.Close()
-		
-
-
+// GetClient returns the Redis client for use in other parts of the application
+func GetClient() *redis.Client {
+	return client
 }
