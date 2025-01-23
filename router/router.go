@@ -13,15 +13,31 @@ func SetupRouter(app *fiber.App) {
     apiGroup := app.Group("/api/" + api.Version)
 
     // Books routes
-    // books := apiGroup.Group("/books")
 	users := apiGroup.Group("/users")
+    books := apiGroup.Group("/books")
+	// rentals := apiGroup.Group("/rentals")
 	
-    // books.Get("/", controllers.GetAllUsers) 
+
+	// Users
 	users.Get("/", controllers.GetAllUsers)
 	users.Post("/", controllers.CreateUsers)
+	users.Get("/:id", controllers.GetUserById)
+	// users.Put("/:id", controllers.UpdateUser)
 	users.Delete("/:id", controllers.DeleteUser)
-	// books.Put("/:id", updateBooks)
-	// books.Delete("/:id", delteBooks)
-	
+
+
+	// Books
+	books.Get("/", controllers.GetAllBooks)
+	books.Post("/", controllers.CreateBooks)
+	books.Get("/:id", controllers.GetBookById)
+	// books.Put("/:id", controllers.UpdateBook)
+	books.Delete("/:id", controllers.DeleteBook)
+
+	// Rentals
+	// rentals.Get("/", controllers.GetAllRentals)
+	// rentals.Post("/", controllers.CreateRentals)
+	// rentals.Get("/:id", controllers.GetRentalById)
+	// rentals.Put("/:id", controllers.UpdateRental)
+	// rentals.Delete("/:id", controllers.DeleteRental)
 }
 

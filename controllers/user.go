@@ -6,11 +6,10 @@ import (
 	"library-management-api/db"
 	"library-management-api/models"
 	"library-management-api/utilities"
-	"strconv"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
-	"github.com/redis/go-redis/v9"
+	"github.com/google/uuid"
 )
 
 
@@ -76,17 +75,8 @@ func CreateUsers(c *fiber.Ctx) error {
 	}
 	user.Password = hashPassword
 
-	// Generate a unique ID using Redis (incrementing counter)
-	idKey := "user_id_counter"
-	userID, err := db.GetClient().Incr(context.Background(), idKey).Result()
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "Failed to generate user ID",
-			"error":   err.Error(),
-		})
-	}
 
-	user.ID = strconv.FormatInt(userID, 10) // Convert the ID to a string
+	user.ID = uuid.New().String()
 
 	userJSON, err := json.Marshal(user)
 	if err != nil {
@@ -121,123 +111,103 @@ func CreateUsers(c *fiber.Ctx) error {
 
 
 func GetUserById(c *fiber.Ctx) error {
-	id := c.Params("id")
-	key := "user:" + id 
+    id := c.Params("id")
+    userList, err := db.GetClient().LRange(context.Background(), "users", 0, -1).Result()
+    if err != nil {
+        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+            "message": "Error retrieving users from Redis",
+            "error":   err.Error(),
+        })
+    }
 
-	val, err := db.GetClient().Get(context.Background(), key).Result()
-	if err != nil {
-		if err == redis.Nil {
-			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-				"message": "User  not found",
-			})
-		}
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "Error retrieving user",
-			"error":   err.Error(),
-		})
-	}
+    for _, userData := range userList {
+        var user models.Users
+        if err := json.Unmarshal([]byte(userData), &user); err != nil {
+            return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+                "message": "Error unmarshalling user data",
+                "error":   err.Error(),
+            })
+        }
+        if user.ID == id {
+            return c.Status(fiber.StatusOK).JSON(fiber.Map{
+                "user": user,
+            })
+        }
+    }
 
-	var user models.Users
-	if err := json.Unmarshal([]byte(val), &user); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "Error unmarshalling user data",
-			"error":   err.Error(),
-		})
-	}
-
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"user": user,
-	})
+    return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+        "message": "User  not found",
+    })
 }
 
 
 // func UpdateUser (c *fiber.Ctx) error {
 // 	id := c.Params("id")
-// 	key := "user:" + id 
 
-// 	val, err := db.GetClient().Get(context.Background(), key).Result()
+// 	userList, err := db.GetClient().LRange(context.Background(), "users", 0, -1).Result()
 // 	if err != nil {
-// 		if err == redis.Nil {
-// 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-// 				"message": "User  not found",
+// 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+// 			"message": "Error retrieving users from Redis",
+// 			"error":   err.Error(),
+// 		})
+// 	}
+
+// 	var userFound bool
+// 	for i, userData := range userList {
+// 		var user models.Users
+// 		if err := json.Unmarshal([]byte(userData), &user); err != nil {
+// 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+// 				"message": "Error unmarshalling user data",
+//                 "error":   err.Error(),
 // 			})
 // 		}
-// 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-// 			"message": "Error retrieving user",
-// 			"error":   err.Error(),
-// 		})
-// 	}
 
-// 	var existingUser  models.Users
-// 	if err := json.Unmarshal([]byte(val), &existingUser ); err != nil {
-// 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-// 			"message": "Error unmarshalling user data",
-// 			"error":   err.Error(),
-// 		})
+// 		if user.ID == id {
+// 			userIndex = i
+// 		}
 // 	}
-
-// 	updatedUser  := new(models.Users)
-// 	if err := c.BodyParser(updatedUser ); err != nil {
-// 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-// 			"message": "Error parsing request body",
-// 			"error":   err.Error(),
-// 		})
-// 	}
-
-// 	if updatedUser .FirstName != "" {
-// 		existingUser .FirstName = updatedUser .FirstName
-// 	}
-// 	if updatedUser .LastName != "" {
-// 		existingUser .LastName = updatedUser .LastName
-// 	}
-// 	if updatedUser .Email != "" {
-// 		existingUser .Email = updatedUser .Email
-// 	}
-// 	if updatedUser .Phone != "" {
-// 		existingUser .Phone = updatedUser .Phone
-// 	}
-
-// 	updatedUser JSON, err := json.Marshal(existingUser )
-// 	if err != nil {
-// 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-// 			"message": "Error serializing updated user",
-// 			"error":   err.Error(),
-// 		})
-// 	}
-
-// 	if err := db.GetClient().Set(context.Background(), key, updatedUser, JSON, 0).Err(); err != nil {
-// 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-// 			"message": "Failed to update user",
-// 			"error":   err.Error(),
-// 		})
-// 	}
-
-// 	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-// 		"message": "Success update user",
-// 		"user":    existingUser ,
-// 	})
 // }
 
-func DeleteUser(c *fiber.Ctx) error {
+func DeleteUser (c *fiber.Ctx) error {
 	id := c.Params("id")
-	key := "user:" + id 
+	
+	userList, err := db.GetClient().LRange(context.Background(), "users", 0, -1).Result()
+    if err != nil {
+        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+            "message": "Error retrieving users from Redis",
+            "error":   err.Error(),
+        })
+    }
 
-	if err := db.GetClient().Del(context.Background(), key).Err(); err != nil {
-		if err == redis.Nil {
-			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-				"message": "User  not found",
-			})
+	var userFound bool
+	for _, userData := range userList {
+        var user models.Users
+        if err := json.Unmarshal([]byte(userData), &user); err != nil {
+            return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+                "message": "Error unmarshalling user data",
+                "error":   err.Error(),
+            })
+        }
+
+        if user.ID == id {
+            if err := db.GetClient().LRem(context.Background(), "users", 1, userData).Err(); err != nil {
+                return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+                    "message": "Error deleting user from list",
+                    "error":   err.Error(),
+                })
+            }
+			userFound = true
+            break
 		}
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"message": "Error retrieving user",
-			"error":   err.Error(),
-		})
+		
 	}
-	
-
-	return c.Status(fiber.StatusOK).JSON(fiber.Map{
-		"message": "Success delete user",
-	})
-	
-
+	if userFound {
+        return c.Status(fiber.StatusOK).JSON(fiber.Map{
+            "message": "User  deleted successfully",
+        })
+    } else {
+        return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+            "message": "User  not found",
+        })
+    }
 }

@@ -20,7 +20,7 @@ func main() {
 
 	router.SetupRouter(app);
 
-	if err := app.Listen(":4000"); err != nil {
+	if err := app.Listen("localhost:4000"); err != nil {
 		panic(err)
 	}
 }
