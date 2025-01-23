@@ -113,9 +113,70 @@ func GetBookById(c *fiber.Ctx) error {
     })
 }
 
-// func UpdateBook(c *fiber.Ctx) error {
+func UpdateBook(c *fiber.Ctx) error {
+	id := c.Params("id")
 
-// }
+	bookList, err := db.GetClient().LRange(context.Background(), "books", 0, -1).Result()
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Error retrieving book from Redis",
+			"error":   err.Error(),
+		})
+	}
+
+	var bookFound bool
+	var bookIndex int
+	var bookToUpdate models.Books
+	for i, bookData := range bookList {
+		var book models.Books
+		if err := json.Unmarshal([]byte(bookData), &book); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"message": "Error unmarshalling book data",
+				"error":   err.Error(),
+			})
+		}
+		if book.ID == id {
+			bookFound = true
+			bookIndex = i
+			bookToUpdate = book
+			break
+		}
+	}
+
+	if !bookFound {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"message": "Book  not found",
+		})
+	}
+
+	if err := c.BodyParser(&bookToUpdate); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Failed to parse request body",
+			"error":   err.Error(),
+		})
+	}
+
+	bookJSON, err := json.Marshal(bookToUpdate)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Failed to serialize book",
+			"error":   err.Error(),
+			})
+	}
+
+	if err := db.GetClient().LSet(context.Background(), "books", int64(bookIndex), bookJSON).Err(); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Failed to update book in Redis",
+			"error":   err.Error(),
+	})
+	}
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": "Book updated successfully",
+		"data": bookToUpdate,
+	})
+
+}
 
 func DeleteBook(c *fiber.Ctx) error {
 	id := c.Params("id")

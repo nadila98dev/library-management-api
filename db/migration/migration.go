@@ -12,7 +12,7 @@ func Migration() {
 		&models.Users();
 	)
 	if err != nil {
-		log.Fatal("Failed to migrate..")
+		fmt.Fatal("Failed to migrate..")
 	}
 	fmt.Println("Migrated successfully")
 }

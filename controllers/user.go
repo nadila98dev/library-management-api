@@ -141,32 +141,90 @@ func GetUserById(c *fiber.Ctx) error {
 }
 
 
-// func UpdateUser (c *fiber.Ctx) error {
-// 	id := c.Params("id")
+func UpdateUser(c *fiber.Ctx) error {
+	id := c.Params("id")
 
-// 	userList, err := db.GetClient().LRange(context.Background(), "users", 0, -1).Result()
-// 	if err != nil {
-// 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-// 			"message": "Error retrieving users from Redis",
-// 			"error":   err.Error(),
-// 		})
-// 	}
+	userList, err := db.GetClient().LRange(context.Background(), "users", 0, -1).Result()
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Error retrieving users from Redis",
+			"error":   err.Error(),
+		})
+	}
 
-// 	var userFound bool
-// 	for i, userData := range userList {
-// 		var user models.Users
-// 		if err := json.Unmarshal([]byte(userData), &user); err != nil {
-// 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-// 				"message": "Error unmarshalling user data",
-//                 "error":   err.Error(),
-// 			})
-// 		}
+	var userFound bool
+	var userIndex int
+	var userToUpdate models.Users
+	for i, userData := range userList {
+		var user models.Users
+		if err := json.Unmarshal([]byte(userData), &user); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"message": "Error unmarshalling user data",
+				"error":   err.Error(),
+			})
+		}
+		if user.ID == id {
+			userFound = true
+			userIndex = i
+			userToUpdate = user
+			break
+		}
+	}
 
-// 		if user.ID == id {
-// 			userIndex = i
-// 		}
-// 	}
-// }
+	if !userFound {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"message": "User  not found",
+		})
+	}
+
+	if err := c.BodyParser(&userToUpdate); err != nil {
+			return c.Status(fiber.StatusServiceUnavailable).JSON(fiber.Map{
+			"message": "Failed to parse request body",
+			"error":   err.Error(),
+		})
+	}
+
+	validate := validator.New()
+	if errValidate := validate.Struct(userToUpdate); errValidate != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+		"message": "Validation failed",
+		"error":   errValidate.Error(),
+		})
+	}
+
+	if userToUpdate.Password != "" {
+		hashPassword, err := utilities.HashPassword(userToUpdate.Password)
+	if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Failed to hash password",
+			"error":   err.Error(),
+	})
+	}
+	userToUpdate.Password = hashPassword
+	}
+
+	userJSON, err := json.Marshal(userToUpdate)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+		"message": "Failed to serialize user",
+		"error":   err.Error(),
+		})
+ 	}
+
+	 if err := db.GetClient().LSet(context.Background(), "users", int64(userIndex), userJSON).Err(); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"message": "Failed to update user in Redis",
+				"error":   err.Error(),
+		})
+	 	}
+
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+				"message": "User  updated successfully",
+		 		"user":    userToUpdate,
+			})
+
+}
 
 func DeleteUser (c *fiber.Ctx) error {
 	id := c.Params("id")
