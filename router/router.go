@@ -16,6 +16,7 @@ func SetupRouter(app *fiber.App) {
 	users := apiGroup.Group("/users")
     books := apiGroup.Group("/books")
 	rentals := apiGroup.Group("/rentals")
+	// login := apiGroup.Group("/login")
 	
 
 	// Users
@@ -39,5 +40,7 @@ func SetupRouter(app *fiber.App) {
 	rentals.Get("/:id", controllers.GetRentalById)
 	rentals.Put("/:id", controllers.UpdateRental)
 	rentals.Delete("/:id", controllers.DeleteRental)
+
+
 }
 

@@ -75,6 +75,17 @@ func CreateUsers(c *fiber.Ctx) error {
 	}
 	user.Password = hashPassword
 
+	hashConfirmPassword, err := utilities.HashPassword(user.ConfirmPassword)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Failed to hash password",
+			"error":   err.Error(),
+		})
+	}
+	user.ConfirmPassword = hashConfirmPassword
+
+	
+
 
 	user.ID = uuid.New().String()
 
@@ -201,6 +212,17 @@ func UpdateUser(c *fiber.Ctx) error {
 	})
 	}
 	userToUpdate.Password = hashPassword
+	}
+
+	if userToUpdate.ConfirmPassword != "" {
+		hashConfirmPassword, err := utilities.HashPassword(userToUpdate.ConfirmPassword)
+		if err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"message": "Failed to hash confirm password",
+			"error":   err.Error(),
+			})
+		}
+		userToUpdate.ConfirmPassword = hashConfirmPassword
 	}
 
 	userJSON, err := json.Marshal(userToUpdate)
