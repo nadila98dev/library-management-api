@@ -1,7 +1,7 @@
 package router
 
 import (
-	"library-management-api/cmd/api" // Adjust the import path according to your project structure
+	"library-management-api/cmd/api"
 	"library-management-api/controllers"
 
 	"github.com/gofiber/fiber/v2"

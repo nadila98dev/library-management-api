@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: goapp-deployment
+  labels:
+    app: goapp
+spec:
+  replicas: 2 # Number of pods
+  selector:
+    matchLabels:
+      app: goapp
+  template:
+    metadata:
+      labels:
+        app: goapp
+    spec:
+      containers:
+        - name: goapp
+          image: <your-dockerhub-username>/goapp:latest # Replace with your Docker image
+          ports:
+            - containerPort: 3000
+          volumeMounts:
+            - mountPath: /app
+              name: app-volume
+          command: ["air", "run", "main.go"]
+      volumes:
+        - name: app-volume
+          hostPath:
+            path: /app # Local path on the node
