@@ -3,6 +3,7 @@ package router
 import (
 	"library-management-api/cmd/api"
 	"library-management-api/controllers"
+	"library-management-api/middleware"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -13,34 +14,38 @@ func SetupRouter(app *fiber.App) {
     apiGroup := app.Group("/api/" + api.Version)
 
     // Books routes
-	users := apiGroup.Group("/users")
-    books := apiGroup.Group("/books")
-	rentals := apiGroup.Group("/rentals")
-	// login := apiGroup.Group("/login")
-	
+    login := apiGroup.Group("/login")
+    users := apiGroup.Group("/users", middleware.JWTMiddleware)
+    books := apiGroup.Group("/books", middleware.JWTMiddleware)
+    rentals := apiGroup.Group("/rentals", middleware.JWTMiddleware)
+    
+    // Login
+    login.Post("/", controllers.LoginHandler)
 
-	// Users
-	users.Get("/", controllers.GetAllUsers)
-	users.Post("/", controllers.CreateUsers)
-	users.Get("/:id", controllers.GetUserById)
-	users.Put("/:id", controllers.UpdateUser)
-	users.Delete("/:id", controllers.DeleteUser)
+    // Users
+    // books.Post("/login", controllers.LoginHandler)
+    users.Get("/", controllers.GetAllUsers)
+    users.Post("/", middleware.RoleMiddleware([]string{"admin"}), controllers.GetAllBooks)
+    users.Get("/:id", controllers.GetUserById)
+    users.Put("/:id", middleware.RoleMiddleware([]string{"admin"}), controllers.UpdateUser)
+    users.Delete("/:id", controllers.DeleteUser)
 
 
-	// Books
-	books.Get("/", controllers.GetAllBooks)
-	books.Post("/", controllers.CreateBooks)
-	books.Get("/:id", controllers.GetBookById)
-	books.Put("/:id", controllers.UpdateBook)
-	books.Delete("/:id", controllers.DeleteBook)
+    // Books
+    books.Get("/", controllers.GetAllBooks)
+    books.Post("/", middleware.RoleMiddleware([]string{"admin"}), controllers.CreateBooks)
+    books.Get("/:id", controllers.GetBookById)
+    books.Put("/:id", controllers.UpdateBook)
+    books.Delete("/:id", middleware.RoleMiddleware([]string{"admin"}), controllers.DeleteBook)
 
-	// Rentals
-	rentals.Get("/", controllers.GetALLRentals)
-	rentals.Post("/", controllers.CreateRentals)
-	rentals.Get("/:id", controllers.GetRentalById)
-	rentals.Put("/:id", controllers.UpdateRental)
-	rentals.Delete("/:id", controllers.DeleteRental)
+    // Rentals
+    rentals.Get("/", controllers.GetALLRentals)
+    rentals.Post("/", middleware.RoleMiddleware([]string{"user"}), controllers.CreateRentals)
+    rentals.Get("/:id", controllers.GetRentalById)
+    rentals.Put("/:id", middleware.RoleMiddleware([]string{"user"}), controllers.UpdateRental)
+    rentals.Delete("/:id", controllers.DeleteRental)
 
 
 }
+
 

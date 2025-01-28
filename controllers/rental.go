@@ -64,7 +64,7 @@ func CreateRentals(c *fiber.Ctx) error {
     var bookToUpdate *models.Books
     var stock int
     bookFound := false
-    var index int 
+    var index int
 
     for i, bookData := range bookList {
         var book models.Books
@@ -77,7 +77,7 @@ func CreateRentals(c *fiber.Ctx) error {
         if book.ID == rental.BookID {
             bookFound = true
             bookToUpdate = &book
-            stock = book.Stock 
+            stock = book.Stock
             index = i
             break
         }
@@ -96,9 +96,8 @@ func CreateRentals(c *fiber.Ctx) error {
     }
 
     newStock := stock - 1
-    bookToUpdate.Stock = newStock 
+    bookToUpdate.Stock = newStock
 
-    
     updatedBookJSON, err := json.Marshal(bookToUpdate)
     if err != nil {
         return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -115,7 +114,7 @@ func CreateRentals(c *fiber.Ctx) error {
         })
     }
 
-    if rental.UserID == "" && rental.StudentName == "" {
+    if rental.UserID == "" {
         return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
             "message": "User ID is required",
         })
@@ -129,19 +128,19 @@ func CreateRentals(c *fiber.Ctx) error {
         })
     }
 
-
-    userFound := false
+    var userFound bool
+    var user models.Users
 
     for _, userData := range userlist {
-        var user models.Users
         if err := json.Unmarshal([]byte(userData), &user); err != nil {
             return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-                "message": "Error unmarshall",
+                "message": "Error unmarshalling user data",
                 "error": err.Error(),
             })
         }
         if user.ID == rental.UserID {
             userFound = true
+            break
         }
     }
 
@@ -150,6 +149,9 @@ func CreateRentals(c *fiber.Ctx) error {
             "message": "User ID not found",
         })
     }
+
+    rental.StudentName = user.FirstName + " " + user.LastName
+    rental.Status = "rent"
 
     rental.ID = uuid.New().String()
 
@@ -249,7 +251,7 @@ func UpdateRental(c *fiber.Ctx) error {
         })
     }
 
-	rentalToUpdate.Status = "Returned"
+	rentalToUpdate.Status = "returned"
 
 	bookList, err := db.GetClient().LRange(context.Background(), "books", 0, -1).Result()
     if err != nil {

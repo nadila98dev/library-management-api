@@ -4,14 +4,79 @@ import (
 	"context"
 	"encoding/json"
 	"library-management-api/db"
+	"library-management-api/helpers"
 	"library-management-api/models"
 	"library-management-api/utilities"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
 )
 
+func LoginHandler(c *fiber.Ctx) error {
+	var credentials models.Users
+
+	// Parse the request body into the credentials struct.
+	if err := c.BodyParser(&credentials); err != nil {
+		return c.Status(fiber.ErrBadRequest.Code).JSON(fiber.Map{
+			"message": "Invalid user data",
+			"error":   err.Error(),
+		})
+	}
+
+	// Retrieve user data from Redis.
+	userList, err := db.GetClient().LRange(context.Background(), "users", 0, -1).Result()
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Failed to retrieve users from Redis",
+			"error":   err.Error(),
+		})
+	}
+
+	// Authenticate the user.
+	var authenticatedUser *models.Users
+	for _, userData := range userList {
+		var user models.Users
+		if err := json.Unmarshal([]byte(userData), &user); err != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"message": "Failed to parse user data",
+				"error":   err.Error(),
+			})
+		}
+
+		// Check if email matches.
+		if user.Email == credentials.Email {
+			// Compare the provided password with the stored hashed password.
+			if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(credentials.Password)); err == nil {
+				authenticatedUser = &user
+				break
+			}
+		}
+	}
+
+	// If no match is found, return an error.
+	if authenticatedUser == nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"message": "Invalid email or password",
+		})
+	}
+
+	// Generate JWT.
+	token, err := helpers.GenerateJWT(authenticatedUser.Email, authenticatedUser.Role)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"message": "Failed to generate token",
+			"error":   err.Error(),
+		})
+	}
+
+	// Return the generated token.
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{
+		"message": token,
+		// "token":   token,
+	})
+}
 
 
 func GetAllUsers(c *fiber.Ctx) error {
