@@ -1,11 +1,49 @@
-version: "3.8"
-
+version: "3.3"
 services:
-  goapp:
-    build: .
-    container_name: goapp
-    ports:
-      - "3000:3000"
+  redis:
+    image: redis:6.0
+    container_name: redis
+    restart: always
     volumes:
-      - .:/app
-    command: air run main.go
+      - redis_volume_data:/data
+    ports:
+      - 6379:6379
+    networks:
+      - redis_network
+
+  redis_insight:
+    image: redislabs/redisinsight:1.14.0
+    container_name: redis_insight
+    restart: always
+    ports:
+      - 8001:8001
+    volumes:
+      - redis_insight_volume_data:/db
+    networks:
+      - redis_network
+
+  golang_service:
+    build:
+      context: ./ # Path to your Golang application
+      dockerfile: Dockerfile # Name of the Dockerfile for your Golang app
+    container_name: golang_service
+    restart: always
+    ports:
+      - 8080:8080 # Map your service port to host
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - redis
+    networks:
+      - redis_network
+    volumes:
+      - ./.env:/app/.env # If you use .env file
+
+volumes:
+  redis_volume_data:
+  redis_insight_volume_data:
+
+networks:
+  redis_network:
+    driver: bridge

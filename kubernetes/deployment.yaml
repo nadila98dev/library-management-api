@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: goapp
-          image: <your-dockerhub-username>/goapp:latest # Replace with your Docker image
+          image: nadila98/goapp:latest # Replace with your Docker image
           ports:
             - containerPort: 3000
           volumeMounts:
