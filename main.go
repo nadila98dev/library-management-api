@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"library-management-api/controllers"
 	"library-management-api/db"
 	"library-management-api/router"
 
@@ -17,11 +18,16 @@ func main() {
 	app := fiber.New();
 
 	db.DBSession();
+	
+	controllers.CreateAdmin()
 
 	router.SetupRouter(app);
+	// fmt.Println("Menjalankan add user admin dari main.go...")
 
 	if err := app.Listen("0.0.0.0:8080"); err != nil {
 		panic(err)
 	}
 }
+
+
 

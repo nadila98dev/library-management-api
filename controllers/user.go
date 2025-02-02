@@ -3,6 +3,7 @@ package controllers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"library-management-api/db"
 	"library-management-api/helpers"
 	"library-management-api/models"
@@ -13,6 +14,43 @@ import (
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
+
+func CreateAdmin() {
+	client := db.GetClient()
+	key := "users"
+
+// Data dummy
+users := []models.Users{
+	{
+		ID:              uuid.New().String(),
+		StudentID:       "STU001",
+		FirstName:       "Admin",
+		LastName:        "User",
+		Email:           "admin@example.com",
+		Phone:           "+62123456789",
+		Role:            "admin",
+		Password:        "admin123",
+		ConfirmPassword: "admin123",
+	},
+}
+
+	// Hash password
+	for i, user := range users {
+		hashedPassword, _ := utilities.HashPassword(user.Password)
+		users[i].Password = hashedPassword
+		users[i].ConfirmPassword = hashedPassword
+
+		// Serialize to JSON
+		userJSON, _ := json.Marshal(users[i])
+
+		// Simpan ke Redis
+		client.RPush(context.Background(), key, userJSON)
+		client.SAdd(context.Background(), "user_keys", "user:"+users[i].ID)
+	}
+	fmt.Println("Seeder: Users berhasil dimasukkan ke database.")
+}
+
+
 
 func LoginHandler(c *fiber.Ctx) error {
 	var credentials models.Users

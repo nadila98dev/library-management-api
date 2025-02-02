@@ -25,7 +25,7 @@ func SetupRouter(app *fiber.App) {
     // Users
     // books.Post("/login", controllers.LoginHandler)
     users.Get("/", controllers.GetAllUsers)
-    users.Post("/", controllers.GetAllBooks)
+    users.Post("/", controllers.CreateUsers)
     users.Get("/:id", controllers.GetUserById)
     users.Put("/:id", middleware.RoleMiddleware([]string{"admin"}), controllers.UpdateUser)
     users.Delete("/:id", controllers.DeleteUser)
